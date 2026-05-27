@@ -1,0 +1,590 @@
+```html
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RH5 Learning Hub</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eef2ff', 100: '#e0e7ff', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 900: '#312e81' },
+                    },
+                    fontFamily: { sans: ['Inter', 'Sarabun', 'sans-serif'] },
+                    animation: { 'blob': 'blob 10s infinite' },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM (Production Versions via CDN) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Supabase JS via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body { 
+            font-family: 'Inter', 'Sarabun', sans-serif; 
+            margin: 0; padding: 0; overscroll-behavior-y: none; color: #1e293b;
+            background-color: #f8fafc;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* REAL GLASSMORPHISM CLASSES */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.8); border-left: 1px solid rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3); border-right: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.9); border-left: 1px solid rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4); border-right: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.04); transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 10px 25px 0 rgba(0, 0, 0, 0.08); transform: translateY(-2px);
+        }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.5);
+            border-top: 1px solid rgba(0, 0, 0, 0.05); border-left: 1px solid rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.8); border-right: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); backdrop-filter: blur(4px);
+        }
+        .glass-input:focus { background: rgba(255, 255, 255, 0.9); outline: none; border-color: #818cf8; }
+
+        /* Ambient Blobs */
+        .bg-blobs { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; overflow: hidden; background: #e2e8f0; }
+        .blob-1 { position: absolute; top: -10%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(147,197,253,0.8) 0%, rgba(147,197,253,0) 70%); border-radius: 50%; filter: blur(60px); }
+        .blob-2 { position: absolute; bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(196,181,253,0.8) 0%, rgba(196,181,253,0) 70%); border-radius: 50%; filter: blur(80px); animation-delay: 2s; }
+        .blob-3 { position: absolute; top: 40%; left: 40%; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(167,243,208,0.6) 0%, rgba(167,243,208,0) 70%); border-radius: 50%; filter: blur(60px); animation-delay: 4s; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // ==========================================
+        // 🔴 1. ตั้งค่า SUPABASE ตรงนี้ก่อนนำขึ้น GitHub 🔴
+        // ==========================================
+        const SUPABASE_URL = 'https://snjdjphxbvxkikxensal.supabase.co/rest/v1/'; // เช่น 'https://xxxxxxx.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuamRqcGh4YnZ4a2lreGVuc2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDQ0MDAsImV4cCI6MjA5NTQ4MDQwMH0.FRyGyWz2iTnxQFYInMiicrYw7EWg2S0ZTCPZMYaHR1M'; // กุญแจยาวๆ ที่ขึ้นต้นด้วย eyJ...
+
+        // ฟังก์ชันจำลองการเชื่อมต่อ (เพื่อเดโม่หากยังไม่ใส่ Key)
+        const isSupabaseConfigured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+        let supabase = null;
+        
+        if (isSupabaseConfigured) {
+            // สร้างการเชื่อมต่อของจริง
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        // --- Mock Data (ทำงานเป็น Fallback เมื่อยังไม่ได้ต่อ Supabase) ---
+        const MOCK_USER = { id: 'EMP10001', nameTh: 'แอดมิน เดโม่ (โหมดทดสอบ)', position: 'Admin', zone: 'ส่วนกลาง', role: 'trainer', examStamps: 99, avgScore: 100 };
+        const MOCK_BANNERS = [{ id: 1, title: 'แคมเปญท่องเที่ยวยุโรป 2024', imageUrl: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=1200&q=80', link: '#' }];
+        const MOCK_EXAMS = [{ id: 1, title: 'ข้อสอบเดโม่', description: 'นี่คือข้อสอบจำลอง', imageUrl: 'https://images.unsplash.com/photo-1591696205602-2f950c417cb9?auto=format&fit=crop&w=800&q=80', link: '#', dueDate: '30 พ.ค. 2567' }];
+        const MOCK_LIBRARY = [{ id: 1, title: 'คู่มือการใช้งาน (Demo)', type: 'pdf', category: 'Product', views_count: 342, downloads_count: 156, created_at: '22 พ.ค. 2567', cover_image_url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80' }];
+
+        // --- Icons ---
+        const IconHome = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+        const IconBook = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-0-2.5 2.5 2.5 0 0 1 2.5-2.5h11"/></svg>;
+        const IconClipboardList = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>;
+        const IconUsers = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+        const IconMenu = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>;
+        const IconPlus = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+        const IconExternalLink = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>;
+        const IconSearch = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+        const IconEdit = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+        const IconTrash = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+        const IconDownload = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+        const IconEye = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+        const IconX = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+        const IconLogOut = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+        const IconKey = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>;
+        const IconTrendingUp = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>;
+        const IconAward = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>;
+        
+        // --- Shared Components ---
+        const AmbientBackground = () => (
+            <div className="bg-blobs"><div className="blob-1 animate-blob"></div><div className="blob-2 animate-blob"></div><div className="blob-3 animate-blob"></div></div>
+        );
+
+        const Modal = ({ isOpen, onClose, title, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+                    <div className="glass-panel rounded-3xl shadow-2xl w-full max-w-md relative z-10 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center p-5 border-b border-white/40">
+                            <h3 className="font-bold text-lg text-slate-800">{title}</h3>
+                            <button onClick={onClose} className="p-2 rounded-full bg-white/30 hover:bg-white/60 text-slate-600 transition-colors"><IconX className="w-4 h-4" /></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto">{children}</div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 1. Auth View ---
+        const AuthView = ({ onSessionEstablished }) => {
+            const [mode, setMode] = useState('login'); 
+            const [email, setEmail] = useState(''); // ใช้ Username ใส่ต่อท้ายด้วย @rh5.internal
+            const [password, setPassword] = useState('');
+            const [regData, setRegData] = useState({ fullName: '', position: '', zone: '', username: '', password: '' });
+            const [loading, setLoading] = useState(false);
+            
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                
+                if (!isSupabaseConfigured) {
+                    alert("⚠️ คำเตือน: ยังไม่ได้ใส่ค่า SUPABASE_URL ในโค้ด\n\nระบบจะเข้าสู่ Demo Mode อัตโนมัติ");
+                    setTimeout(() => onSessionEstablished(MOCK_USER), 1000);
+                    return;
+                }
+
+                // Authentication จริงผ่าน Supabase
+                const formattedEmail = email.includes('@') ? email : `${email}@rh5.internal`;
+                const { data, error } = await supabase.auth.signInWithPassword({ email: formattedEmail, password });
+                
+                if (error) {
+                    alert('เข้าสู่ระบบไม่สำเร็จ: ' + error.message);
+                    setLoading(false);
+                } else {
+                    fetchUserProfile(data.user.id);
+                }
+            };
+
+            const handleRegister = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+
+                if (!isSupabaseConfigured) {
+                    alert("ต้องตั้งค่า Supabase ก่อนจึงจะสมัครสมาชิกได้");
+                    setLoading(false); return;
+                }
+
+                const emailForAuth = `${regData.username}@rh5.internal`;
+                
+                // สมัครพร้อมส่ง Meta Data ให้ Trigger ทำงานสร้าง Profile
+                const { data, error } = await supabase.auth.signUp({
+                    email: emailForAuth,
+                    password: regData.password,
+                    options: {
+                        data: {
+                            full_name: regData.fullName,
+                            username: regData.username,
+                            position: regData.position,
+                            zone: regData.zone,
+                            role: 'user'
+                        }
+                    }
+                });
+
+                if (error) {
+                    alert('สมัครสมาชิกไม่สำเร็จ: ' + error.message);
+                } else {
+                    alert('ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบ');
+                    setMode('login');
+                }
+                setLoading(false);
+            };
+
+            const fetchUserProfile = async (userId) => {
+                const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+                if (data) onSessionEstablished(data);
+                else alert("ไม่พบข้อมูล Profile");
+                setLoading(false);
+            };
+
+            return (
+                <>
+                    <AmbientBackground />
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="glass-panel rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col md:flex-row relative z-10">
+                            {/* Branding Side */}
+                            <div className="w-full md:w-5/12 bg-white/20 p-10 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/40">
+                                <div>
+                                    <div className="w-12 h-12 bg-white/60 backdrop-blur-md rounded-2xl flex items-center justify-center text-brand-600 font-bold text-xl mb-6 border border-white">RH</div>
+                                    <h1 className="text-3xl font-bold mb-4 leading-tight text-slate-800">Learning<br/>Ecosystem</h1>
+                                    <p className="text-slate-600 text-sm font-medium">ยกระดับศักยภาพและการเรียนรู้ของทีมขาย เข้าถึงข้อมูล แลกเปลี่ยนความรู้ และเติบโตไปด้วยกัน</p>
+                                </div>
+                                <div className="mt-12 md:mt-0">
+                                    <p className="text-xs text-slate-500 font-medium">© 2026 RH5 Life Insurance.</p>
+                                </div>
+                            </div>
+
+                            {/* Form Side */}
+                            <div className="w-full md:w-7/12 p-8 md:p-12">
+                                {mode === 'login' ? (
+                                    <div className="animate-in fade-in duration-500">
+                                        <h2 className="text-2xl font-bold text-slate-800 mb-2">เข้าสู่ระบบ</h2>
+                                        
+                                        <form onSubmit={handleLogin} className="space-y-5 mt-6">
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Username</label>
+                                                <input type="text" onChange={(e)=>setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl glass-input" placeholder="รหัสพนักงาน" required />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Password</label>
+                                                <input type="password" onChange={(e)=>setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl glass-input" placeholder="••••••••" required />
+                                            </div>
+                                            <button type="submit" disabled={loading} className="w-full bg-brand-600/90 text-white font-bold py-3.5 rounded-xl transition-colors shadow-md border border-white/20 mt-4">
+                                                {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+                                            </button>
+                                        </form>
+
+                                        <div className="mt-8 text-center space-y-4">
+                                            <div className="border-t border-white/50 pt-4">
+                                                <p className="text-sm font-medium text-slate-600">ยังไม่มีบัญชี? <button onClick={() => setMode('register')} className="text-brand-600 font-bold hover:underline">ลงทะเบียน</button></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="animate-in fade-in duration-500">
+                                        <h2 className="text-2xl font-bold text-slate-800 mb-2">ลงทะเบียนผู้ใช้งาน</h2>
+                                        
+                                        <form onSubmit={handleRegister} className="space-y-4 mt-6">
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1.5">ชื่อ - นามสกุล</label>
+                                                <input type="text" onChange={e=>setRegData({...regData, fullName: e.target.value})} className="w-full px-4 py-2.5 rounded-xl glass-input" required />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-bold text-slate-700 mb-1.5">ตำแหน่ง</label>
+                                                    <select onChange={e=>setRegData({...regData, position: e.target.value})} className="w-full px-4 py-2.5 rounded-xl glass-input text-slate-600" required>
+                                                        <option value="">เลือกตำแหน่ง</option>
+                                                        <option value="IS">IS</option><option value="IA">IA</option><option value="RSM">RSM</option><option value="TTB Seller">TTB Seller</option><option value="Other">อื่นๆ</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-bold text-slate-700 mb-1.5">โซน</label>
+                                                    <select onChange={e=>setRegData({...regData, zone: e.target.value})} className="w-full px-4 py-2.5 rounded-xl glass-input text-slate-600" required>
+                                                        <option value="">เลือกโซน</option>
+                                                        <option value="ส่วนกลาง">ส่วนกลาง</option><option value="ราชบุรี">ราชบุรี</option><option value="สมุทรสาคร">สมุทรสาคร</option><option value="สุราษฎร์ธานี">สุราษฎร์ธานี</option><option value="ภูเก็ต">ภูเก็ต</option><option value="หาดใหญ่">หาดใหญ่</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Username</label>
+                                                <input type="text" onChange={e=>setRegData({...regData, username: e.target.value})} className="w-full px-4 py-2.5 rounded-xl glass-input" required />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Password</label>
+                                                <input type="password" onChange={e=>setRegData({...regData, password: e.target.value})} className="w-full px-4 py-2.5 rounded-xl glass-input" required minLength="6" />
+                                            </div>
+                                            <button type="submit" disabled={loading} className="w-full bg-brand-600/90 text-white font-bold py-3.5 rounded-xl transition-colors shadow-md mt-2">
+                                                {loading ? 'กำลังลงทะเบียน...' : 'ลงทะเบียน'}
+                                            </button>
+                                        </form>
+
+                                        <div className="mt-6 text-center border-t border-white/50 pt-4">
+                                            <p className="text-sm font-medium text-slate-600">มีบัญชีอยู่แล้ว? <button onClick={() => setMode('login')} className="text-brand-600 font-bold hover:underline">เข้าสู่ระบบ</button></p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        // --- 2. Main Module Views ---
+        const HomeView = ({ user }) => {
+            const [banners, setBanners] = useState(MOCK_BANNERS);
+            
+            useEffect(() => {
+                if (isSupabaseConfigured) {
+                    supabase.from('banners').select('*').order('order_index').then(({data}) => {
+                        if(data && data.length > 0) setBanners(data);
+                    });
+                }
+            }, []);
+
+            return (
+                <div className="animate-in fade-in duration-500 space-y-8">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-slate-800 mb-2 drop-shadow-sm">สวัสดีคุณ {user.full_name || user.nameTh} 👋</h1>
+                        <p className="text-slate-600 font-medium">ยินดีต้อนรับสู่ศูนย์กลางการเรียนรู้ RH5 Learning Ecosystem</p>
+                    </div>
+
+                    <div className="relative">
+                        <div className="flex justify-between items-end mb-4">
+                            <h2 className="text-lg font-bold text-slate-800">ประชาสัมพันธ์ & กิจกรรม</h2>
+                            {user.role === 'trainer' && (
+                                <button className="text-sm font-bold text-brand-700 flex items-center gap-1 bg-white/50 px-3 py-1.5 rounded-lg border border-white">
+                                    <IconEdit className="w-4 h-4"/> จัดการ
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x">
+                            {banners.map(banner => (
+                                <div key={banner.id} className="min-w-[300px] md:min-w-[450px] aspect-[21/9] rounded-3xl overflow-hidden glass-card p-0 relative snap-center group border border-white/80">
+                                    <img src={banner.image_url || banner.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent flex items-end p-6">
+                                        <h3 className="text-white font-bold text-xl leading-snug drop-shadow-md">{banner.title}</h3>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div className="glass-card p-6 rounded-3xl flex items-center gap-5">
+                            <div className="p-4 rounded-2xl bg-amber-100/60 text-amber-600 border border-white shadow-sm"><IconAward className="w-8 h-8" /></div>
+                            <div>
+                                <p className="text-sm text-slate-600 font-bold mb-1">แสตมป์ความรู้</p>
+                                <h3 className="text-3xl font-extrabold text-slate-800 flex items-baseline gap-2">
+                                    {user.exam_stamps || user.examStamps} <span className="text-sm font-bold text-slate-500">ดวง</span>
+                                </h3>
+                            </div>
+                        </div>
+                        <div className="glass-card p-6 rounded-3xl flex items-center gap-5">
+                            <div className="p-4 rounded-2xl bg-emerald-100/60 text-emerald-600 border border-white shadow-sm"><IconTrendingUp className="w-8 h-8" /></div>
+                            <div>
+                                <p className="text-sm text-slate-600 font-bold mb-1">คะแนนเฉลี่ยสะสม</p>
+                                <h3 className="text-3xl font-extrabold text-slate-800">{user.avg_score || user.avgScore}%</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LibraryView = ({ user }) => {
+            const [library, setLibrary] = useState(MOCK_LIBRARY);
+            
+            useEffect(() => {
+                if (isSupabaseConfigured) {
+                    supabase.from('library_items').select('*').order('created_at', { ascending: false }).then(({data}) => {
+                        if(data && data.length > 0) setLibrary(data);
+                    });
+                }
+            }, []);
+
+            const logInteraction = async (item, action) => {
+                if(!isSupabaseConfigured) {
+                    if(action === 'view' && item.type === 'link') window.open(item.content_url || '#', '_blank');
+                    return;
+                }
+                
+                // บันทึก Log การดูหรือโหลด
+                await supabase.from('library_interactions').insert([{ user_id: user.id, item_id: item.id, action_type: action }]);
+                
+                if(action === 'view' && item.type === 'link') window.open(item.content_url, '_blank');
+                else if(action === 'download') window.open(item.content_url, '_blank');
+            };
+
+            return (
+                <div className="animate-in fade-in duration-500 flex flex-col h-full space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-slate-800">คลังความรู้ (Library)</h2>
+                        {user.role === 'trainer' && (
+                            <button className="bg-brand-600 text-white text-sm font-bold px-4 py-2 rounded-xl flex items-center gap-2">
+                                <IconPlus className="w-4 h-4"/> เพิ่มหนังสือ
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="glass-card p-0 rounded-3xl overflow-hidden pb-20 md:pb-8">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-0">
+                            {library.map(item => (
+                                <div key={item.id} className="flex flex-col group relative">
+                                    <div className="relative flex flex-col items-center justify-end px-3 sm:px-5 pt-10 pb-0 border-b-[10px] border-white/60">
+                                        <div className="absolute bottom-[-10px] left-0 right-0 h-1.5 bg-slate-400/20 z-0"></div>
+                                        <div className="relative w-[85%] max-w-[140px] aspect-[3/4] mb-[1px] rounded-r-lg rounded-l-sm shadow-md group-hover:-translate-y-4 group-hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden origin-bottom border border-white/40 bg-white">
+                                            <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-r from-black/20 to-transparent z-10 mix-blend-multiply"></div>
+                                            {item.cover_image_url || item.cover ? <img src={item.cover_image_url || item.cover} className="w-full h-full object-cover" /> : <div className={`w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 p-3 flex items-end`}><h3 className="text-white font-bold text-[11px] leading-tight drop-shadow-md">{item.title}</h3></div>}
+                                            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 gap-2">
+                                                <button onClick={() => logInteraction(item, 'view')} className="bg-white/90 text-slate-800 px-3 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-sm"><IconEye className="w-3 h-3"/> เปิดดู</button>
+                                                {item.type !== 'link' && <button onClick={() => logInteraction(item, 'download')} className="bg-white/20 text-white border border-white/40 px-3 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 hover:bg-white hover:text-slate-800 transition-colors"><IconDownload className="w-3 h-3"/> โหลด</button>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 pb-5 px-3 text-center bg-white/20 border-r border-white/30 flex flex-col justify-between h-32 backdrop-blur-sm">
+                                        <h4 className="font-bold text-slate-800 text-xs line-clamp-2 leading-relaxed">{item.title}</h4>
+                                        <div className="mt-2 text-[10px] text-slate-600 font-bold bg-white/60 backdrop-blur-md border border-white py-1.5 rounded-lg flex justify-center gap-3 shadow-sm">
+                                            <span className="flex items-center gap-1" title="Views"><IconEye className="w-3 h-3 text-slate-500"/> {item.views_count || item.views}</span>
+                                            {item.type !== 'link' && <span className="flex items-center gap-1 border-l border-white/50 pl-2" title="Downloads"><IconDownload className="w-3 h-3 text-slate-500"/> {item.downloads_count || item.downloads}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MembersAdminView = ({ usersList }) => {
+            const handleAdminResetPasswordClick = () => {
+                alert("เพื่อความปลอดภัยระดับสูงสุด:\n\nการรีเซ็ตรหัสผ่านในแอปพลิเคชันแบบ No-Build (ไม่ผ่าน Backend Server) จะไม่ได้รับอนุญาต\n\nโปรดเข้าสู่ระบบ Supabase Dashboard เพื่อทำการรีเซ็ตรหัสผ่านให้ผู้ใช้ครับ");
+            };
+
+            return (
+                <div className="animate-in fade-in duration-500 space-y-6">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-800">จัดการสมาชิก</h2>
+                        <p className="text-sm text-slate-600 font-medium mt-1">ดูรายชื่อ หรือ รีเซ็ตรหัสผ่าน</p>
+                    </div>
+
+                    <div className="glass-card rounded-3xl p-4 md:p-6 overflow-x-auto">
+                        <table className="w-full text-left text-sm whitespace-nowrap">
+                            <thead className="text-slate-500 uppercase font-bold text-xs border-b border-white/50">
+                                <tr>
+                                    <th className="px-4 py-3">ชื่อ-นามสกุล</th>
+                                    <th className="px-4 py-3">ตำแหน่ง / โซน</th>
+                                    <th className="px-4 py-3">สิทธิ์</th>
+                                    <th className="px-4 py-3 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/30">
+                                {usersList.map(user => (
+                                    <tr key={user.id} className="hover:bg-white/30 transition-colors">
+                                        <td className="px-4 py-4 font-bold text-slate-800">{user.full_name || user.nameTh}<br/><span className="text-[11px] font-medium text-slate-500">@{user.username}</span></td>
+                                        <td className="px-4 py-4 text-xs">{user.position} | {user.zone}</td>
+                                        <td className="px-4 py-4 text-[10px] uppercase font-bold text-indigo-700">{user.role}</td>
+                                        <td className="px-4 py-4 text-center">
+                                            <button onClick={handleAdminResetPasswordClick} className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-colors border border-amber-200 shadow-sm" title="ตั้งรหัสผ่านใหม่ (ต้องทำผ่าน Dashboard)">
+                                                <IconKey className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main Frame ---
+        const MainApp = ({ currentUser, onLogout }) => {
+            const [currentTab, setCurrentTab] = useState('home');
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            const [usersList, setUsersList] = useState(INITIAL_USERS);
+
+            useEffect(() => {
+                if (isSupabaseConfigured && currentUser.role === 'trainer') {
+                    supabase.from('users').select('*').then(({data}) => { if(data) setUsersList(data); });
+                }
+            }, []);
+
+            const navItems = [
+                { id: 'home', icon: IconHome, label: 'หน้าหลัก' },
+                { id: 'library', icon: IconBook, label: 'คลังความรู้' },
+                ...(currentUser.role === 'trainer' ? [{ id: 'members', icon: IconUsers, label: 'จัดการสมาชิก' }] : []),
+            ];
+
+            const renderContent = () => {
+                switch(currentTab) {
+                    case 'home': return <HomeView user={currentUser} />;
+                    case 'library': return <LibraryView user={currentUser} />;
+                    case 'members': return <MembersAdminView usersList={usersList} />;
+                    default: return <HomeView user={currentUser} />;
+                }
+            };
+
+            const handleLogout = async () => {
+                if (isSupabaseConfigured) await supabase.auth.signOut();
+                onLogout();
+            };
+
+            return (
+                <div className="flex h-screen bg-transparent overflow-hidden text-slate-800 relative z-10">
+                    <AmbientBackground />
+                    
+                    {sidebarOpen && <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-sm z-40 md:hidden" onClick={() => setSidebarOpen(false)}></div>}
+                    
+                    <aside className={`fixed md:static inset-y-0 left-0 w-64 glass-panel flex flex-col z-50 transform transition-transform duration-300 md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:m-4 md:rounded-3xl`}>
+                        <div className="h-20 flex items-center px-6 border-b border-white/50 shrink-0 gap-3">
+                            <div className="w-10 h-10 bg-white/70 backdrop-blur-md rounded-xl flex items-center justify-center text-brand-600 font-bold text-sm border border-white shadow-sm">RH</div>
+                            <span className="font-extrabold text-slate-800 tracking-tight text-lg">Learning Hub</span>
+                        </div>
+                        <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+                            {navItems.map(item => (
+                                <button key={item.id} onClick={() => { setCurrentTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-bold ${currentTab === item.id ? 'bg-white/80 text-brand-600 shadow-sm border border-white' : 'text-slate-600 hover:bg-white/40'}`}>
+                                    <item.icon className={`w-5 h-5 ${currentTab === item.id ? 'text-brand-600' : 'text-slate-500'}`} />{item.label}
+                                </button>
+                            ))}
+                        </nav>
+                    </aside>
+
+                    <main className="flex-1 flex flex-col h-full relative min-w-0">
+                        <header className="glass-panel h-20 md:mt-4 md:mr-4 md:rounded-3xl flex items-center justify-between px-4 md:px-8 shrink-0 z-40">
+                            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 -ml-2 text-slate-600 bg-white/40 rounded-xl"><IconMenu className="w-6 h-6" /></button>
+                            <h1 className="text-xl font-extrabold text-slate-800 hidden md:block">{navItems.find(i=>i.id===currentTab)?.label || ''}</h1>
+                            
+                            <div className="flex items-center gap-3 md:gap-4 ml-auto">
+                                <div className="hidden sm:flex bg-white/70 px-3 py-2 rounded-xl border border-white shadow-sm text-xs font-bold items-center gap-2">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${currentUser.role==='trainer' ? 'bg-indigo-500' : 'bg-emerald-500'}`}></span>
+                                    {currentUser.role === 'trainer' ? 'Admin' : 'User'}
+                                </div>
+                                <button onClick={handleLogout} className="w-10 h-10 bg-white/50 hover:bg-red-50 border border-white shadow-sm rounded-xl flex items-center justify-center text-slate-500 hover:text-red-500 transition-colors" title="ออกจากระบบ">
+                                    <IconLogOut className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-28 md:pb-6">
+                            <div className="max-w-6xl mx-auto h-full">
+                                {renderContent()}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [user, setUser] = useState(null); 
+
+            useEffect(() => {
+                if(isSupabaseConfigured) {
+                    // Check if already logged in
+                    supabase.auth.getSession().then(({ data: { session } }) => {
+                        if (session) {
+                            supabase.from('users').select('*').eq('id', session.user.id).single().then(({data}) => {
+                                if(data) setUser(data);
+                            });
+                        }
+                    });
+                }
+            }, []);
+
+            return user ? <MainApp currentUser={user} onLogout={() => setUser(null)} /> : <AuthView onSessionEstablished={setUser} />;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
+```
