@@ -32,7 +32,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- React & ReactDOM (Production Versions via CDN) -->
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -76,36 +76,56 @@
         }
         .glass-input:focus { background: rgba(255, 255, 255, 0.9); outline: none; border-color: #818cf8; }
 
-        /* Ambient Blobs */
         .bg-blobs { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; overflow: hidden; background: #e2e8f0; }
         .blob-1 { position: absolute; top: -10%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(147,197,253,0.8) 0%, rgba(147,197,253,0) 70%); border-radius: 50%; filter: blur(60px); }
         .blob-2 { position: absolute; bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(196,181,253,0.8) 0%, rgba(196,181,253,0) 70%); border-radius: 50%; filter: blur(80px); animation-delay: 2s; }
         .blob-3 { position: absolute; top: 40%; left: 40%; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(167,243,208,0.6) 0%, rgba(167,243,208,0) 70%); border-radius: 50%; filter: blur(60px); animation-delay: 4s; }
+        
+        /* หน้าจอโหลดระหว่างรอประมวลผล */
+        #loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; background: #f8fafc; font-family: 'Inter', sans-serif; color: #4f46e5; }
+        .spinner { border: 4px solid rgba(79, 70, 229, 0.2); border-left-color: #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <!-- จะแสดงหน้านี้ชั่วคราวตอนที่หน้าจอขาว (กำลังโหลด React) -->
+        <div id="loading-screen">
+            <div class="spinner"></div>
+            <h2 style="font-weight: 600; font-size: 18px;">กำลังโหลดระบบ RH5 Learning Hub...</h2>
+            <p style="font-size: 14px; color: #64748b; margin-top: 8px;">กรุณารอสักครู่ (ขึ้นอยู่กับความเร็วอินเทอร์เน็ต)</p>
+        </div>
+    </div>
+
+    <!-- สคริปต์ป้องกันการจอขาว หากมี Error จะแสดงข้อความขึ้นมา -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            document.getElementById('root').innerHTML = '<div style="padding: 2rem; color: #ef4444; font-family: sans-serif;"><h2>เกิดข้อผิดพลาดในระบบ (System Error)</h2><p>' + message + '</p><p style="font-size:12px; color:#64748b;">บรรทัดที่: ' + lineno + '</p></div>';
+        };
+    </script>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         // ==========================================
-        // 🔴 1. ตั้งค่า SUPABASE ตรงนี้ก่อนนำขึ้น GitHub 🔴
+        // 🔴 1. ตั้งค่า SUPABASE (แก้ URL ให้ถูกต้องแล้ว)
         // ==========================================
-        const SUPABASE_URL = 'https://snjdjphxbvxkikxensal.supabase.co'; // เช่น 'https://xxxxxxx.supabase.co'
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuamRqcGh4YnZ4a2lreGVuc2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDQ0MDAsImV4cCI6MjA5NTQ4MDQwMH0.FRyGyWz2iTnxQFYInMiicrYw7EWg2S0ZTCPZMYaHR1M'; // กุญแจยาวๆ ที่ขึ้นต้นด้วย eyJ...
+        const SUPABASE_URL = 'https://snjdjphxbvxkikxensal.supabase.co'; // ลบคำว่า /rest/v1/ ออกแล้ว
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuamRqcGh4YnZ4a2lreGVuc2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDQ0MDAsImV4cCI6MjA5NTQ4MDQwMH0.FRyGyWz2iTnxQFYInMiicrYw7EWg2S0ZTCPZMYaHR1M';
 
-        // ฟังก์ชันจำลองการเชื่อมต่อ (เพื่อเดโม่หากยังไม่ใส่ Key)
         const isSupabaseConfigured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
         let supabase = null;
         
-        if (isSupabaseConfigured) {
-            // สร้างการเชื่อมต่อของจริง
+        // เช็คว่าโหลด Supabase ผ่าน CDN สำเร็จหรือไม่ ป้องกันจอขาว
+        if (isSupabaseConfigured && window.supabase) {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
-        // --- Mock Data (ทำงานเป็น Fallback เมื่อยังไม่ได้ต่อ Supabase) ---
-        const MOCK_USER = { id: 'EMP10001', nameTh: 'แอดมิน เดโม่ (โหมดทดสอบ)', position: 'Admin', zone: 'ส่วนกลาง', role: 'trainer', examStamps: 99, avgScore: 100 };
+        // --- ข้อมูลจำลอง (Mock Data) สำหรับตอนแอปยังไม่มีข้อมูล ---
+        const INITIAL_USERS = [
+            { id: 'EMP10001', nameTh: 'แอดมิน เดโม่ (โหมดทดสอบ)', position: 'Admin', zone: 'ส่วนกลาง', role: 'trainer', username: 'admin', examStamps: 99, avgScore: 100 }
+        ];
+        const MOCK_USER = INITIAL_USERS[0];
         const MOCK_BANNERS = [{ id: 1, title: 'แคมเปญท่องเที่ยวยุโรป 2024', imageUrl: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=1200&q=80', link: '#' }];
         const MOCK_EXAMS = [{ id: 1, title: 'ข้อสอบเดโม่', description: 'นี่คือข้อสอบจำลอง', imageUrl: 'https://images.unsplash.com/photo-1591696205602-2f950c417cb9?auto=format&fit=crop&w=800&q=80', link: '#', dueDate: '30 พ.ค. 2567' }];
         const MOCK_LIBRARY = [{ id: 1, title: 'คู่มือการใช้งาน (Demo)', type: 'pdf', category: 'Product', views_count: 342, downloads_count: 156, created_at: '22 พ.ค. 2567', cover_image_url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80' }];
@@ -153,7 +173,7 @@
         // --- 1. Auth View ---
         const AuthView = ({ onSessionEstablished }) => {
             const [mode, setMode] = useState('login'); 
-            const [email, setEmail] = useState(''); // ใช้ Username ใส่ต่อท้ายด้วย @rh5.internal
+            const [email, setEmail] = useState(''); 
             const [password, setPassword] = useState('');
             const [regData, setRegData] = useState({ fullName: '', position: '', zone: '', username: '', password: '' });
             const [loading, setLoading] = useState(false);
@@ -162,21 +182,25 @@
                 e.preventDefault();
                 setLoading(true);
                 
-                if (!isSupabaseConfigured) {
-                    alert("⚠️ คำเตือน: ยังไม่ได้ใส่ค่า SUPABASE_URL ในโค้ด\n\nระบบจะเข้าสู่ Demo Mode อัตโนมัติ");
+                if (!supabase) {
+                    alert("⚠️ คำเตือน: ยังไม่ได้เปิดการเชื่อมต่อ Supabase\n\nระบบจะเข้าสู่ Demo Mode อัตโนมัติ");
                     setTimeout(() => onSessionEstablished(MOCK_USER), 1000);
                     return;
                 }
 
-                // Authentication จริงผ่าน Supabase
-                const formattedEmail = email.includes('@') ? email : `${email}@rh5.internal`;
-                const { data, error } = await supabase.auth.signInWithPassword({ email: formattedEmail, password });
-                
-                if (error) {
-                    alert('เข้าสู่ระบบไม่สำเร็จ: ' + error.message);
+                try {
+                    const formattedEmail = email.includes('@') ? email : `${email}@rh5.internal`;
+                    const { data, error } = await supabase.auth.signInWithPassword({ email: formattedEmail, password });
+                    
+                    if (error) {
+                        alert('เข้าสู่ระบบไม่สำเร็จ: ' + error.message);
+                        setLoading(false);
+                    } else {
+                        fetchUserProfile(data.user.id);
+                    }
+                } catch(err) {
+                    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + err.message);
                     setLoading(false);
-                } else {
-                    fetchUserProfile(data.user.id);
                 }
             };
 
@@ -184,42 +208,48 @@
                 e.preventDefault();
                 setLoading(true);
 
-                if (!isSupabaseConfigured) {
+                if (!supabase) {
                     alert("ต้องตั้งค่า Supabase ก่อนจึงจะสมัครสมาชิกได้");
                     setLoading(false); return;
                 }
 
-                const emailForAuth = `${regData.username}@rh5.internal`;
-                
-                // สมัครพร้อมส่ง Meta Data ให้ Trigger ทำงานสร้าง Profile
-                const { data, error } = await supabase.auth.signUp({
-                    email: emailForAuth,
-                    password: regData.password,
-                    options: {
-                        data: {
-                            full_name: regData.fullName,
-                            username: regData.username,
-                            position: regData.position,
-                            zone: regData.zone,
-                            role: 'user'
+                try {
+                    const emailForAuth = `${regData.username}@rh5.internal`;
+                    const { data, error } = await supabase.auth.signUp({
+                        email: emailForAuth,
+                        password: regData.password,
+                        options: {
+                            data: {
+                                full_name: regData.fullName,
+                                username: regData.username,
+                                position: regData.position,
+                                zone: regData.zone,
+                                role: 'user'
+                            }
                         }
-                    }
-                });
+                    });
 
-                if (error) {
-                    alert('สมัครสมาชิกไม่สำเร็จ: ' + error.message);
-                } else {
-                    alert('ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบ');
-                    setMode('login');
+                    if (error) {
+                        alert('สมัครสมาชิกไม่สำเร็จ: ' + error.message);
+                    } else {
+                        alert('ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบ');
+                        setMode('login');
+                    }
+                } catch(err) {
+                    alert('เกิดข้อผิดพลาด: ' + err.message);
                 }
                 setLoading(false);
             };
 
             const fetchUserProfile = async (userId) => {
                 const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
-                if (data) onSessionEstablished(data);
-                else alert("ไม่พบข้อมูล Profile");
-                setLoading(false);
+                if (data) {
+                    onSessionEstablished(data);
+                } else {
+                    alert("เข้าสู่ระบบสำเร็จ แต่ไม่พบข้อมูล Profile ของคุณ (โปรดรอสักครู่และลองล็อกอินใหม่เนื่องจาก Trigger อาจจะทำงานช้า)");
+                    supabase.auth.signOut();
+                    setLoading(false);
+                }
             };
 
             return (
@@ -320,7 +350,7 @@
             const [banners, setBanners] = useState(MOCK_BANNERS);
             
             useEffect(() => {
-                if (isSupabaseConfigured) {
+                if (supabase) {
                     supabase.from('banners').select('*').order('order_index').then(({data}) => {
                         if(data && data.length > 0) setBanners(data);
                     });
@@ -361,7 +391,7 @@
                             <div>
                                 <p className="text-sm text-slate-600 font-bold mb-1">แสตมป์ความรู้</p>
                                 <h3 className="text-3xl font-extrabold text-slate-800 flex items-baseline gap-2">
-                                    {user.exam_stamps || user.examStamps} <span className="text-sm font-bold text-slate-500">ดวง</span>
+                                    {user.exam_stamps || user.examStamps || 0} <span className="text-sm font-bold text-slate-500">ดวง</span>
                                 </h3>
                             </div>
                         </div>
@@ -369,7 +399,7 @@
                             <div className="p-4 rounded-2xl bg-emerald-100/60 text-emerald-600 border border-white shadow-sm"><IconTrendingUp className="w-8 h-8" /></div>
                             <div>
                                 <p className="text-sm text-slate-600 font-bold mb-1">คะแนนเฉลี่ยสะสม</p>
-                                <h3 className="text-3xl font-extrabold text-slate-800">{user.avg_score || user.avgScore}%</h3>
+                                <h3 className="text-3xl font-extrabold text-slate-800">{user.avg_score || user.avgScore || 0}%</h3>
                             </div>
                         </div>
                     </div>
@@ -381,7 +411,7 @@
             const [library, setLibrary] = useState(MOCK_LIBRARY);
             
             useEffect(() => {
-                if (isSupabaseConfigured) {
+                if (supabase) {
                     supabase.from('library_items').select('*').order('created_at', { ascending: false }).then(({data}) => {
                         if(data && data.length > 0) setLibrary(data);
                     });
@@ -389,12 +419,11 @@
             }, []);
 
             const logInteraction = async (item, action) => {
-                if(!isSupabaseConfigured) {
+                if(!supabase) {
                     if(action === 'view' && item.type === 'link') window.open(item.content_url || '#', '_blank');
                     return;
                 }
                 
-                // บันทึก Log การดูหรือโหลด
                 await supabase.from('library_interactions').insert([{ user_id: user.id, item_id: item.id, action_type: action }]);
                 
                 if(action === 'view' && item.type === 'link') window.open(item.content_url, '_blank');
@@ -444,7 +473,7 @@
 
         const MembersAdminView = ({ usersList }) => {
             const handleAdminResetPasswordClick = () => {
-                alert("เพื่อความปลอดภัยระดับสูงสุด:\n\nการรีเซ็ตรหัสผ่านในแอปพลิเคชันแบบ No-Build (ไม่ผ่าน Backend Server) จะไม่ได้รับอนุญาต\n\nโปรดเข้าสู่ระบบ Supabase Dashboard เพื่อทำการรีเซ็ตรหัสผ่านให้ผู้ใช้ครับ");
+                alert("การรีเซ็ตรหัสผ่านโปรดทำผ่านหน้า Dashboard ของ Supabase โดยตรงเพื่อความปลอดภัยสูงสุดครับ");
             };
 
             return (
@@ -471,7 +500,7 @@
                                         <td className="px-4 py-4 text-xs">{user.position} | {user.zone}</td>
                                         <td className="px-4 py-4 text-[10px] uppercase font-bold text-indigo-700">{user.role}</td>
                                         <td className="px-4 py-4 text-center">
-                                            <button onClick={handleAdminResetPasswordClick} className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-colors border border-amber-200 shadow-sm" title="ตั้งรหัสผ่านใหม่ (ต้องทำผ่าน Dashboard)">
+                                            <button onClick={handleAdminResetPasswordClick} className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-colors border border-amber-200 shadow-sm" title="ตั้งรหัสผ่านใหม่">
                                                 <IconKey className="w-4 h-4" />
                                             </button>
                                         </td>
@@ -491,7 +520,7 @@
             const [usersList, setUsersList] = useState(INITIAL_USERS);
 
             useEffect(() => {
-                if (isSupabaseConfigured && currentUser.role === 'trainer') {
+                if (supabase && currentUser.role === 'trainer') {
                     supabase.from('users').select('*').then(({data}) => { if(data) setUsersList(data); });
                 }
             }, []);
@@ -512,7 +541,7 @@
             };
 
             const handleLogout = async () => {
-                if (isSupabaseConfigured) await supabase.auth.signOut();
+                if (supabase) await supabase.auth.signOut();
                 onLogout();
             };
 
@@ -565,15 +594,14 @@
             const [user, setUser] = useState(null); 
 
             useEffect(() => {
-                if(isSupabaseConfigured) {
-                    // Check if already logged in
+                if(supabase) {
                     supabase.auth.getSession().then(({ data: { session } }) => {
                         if (session) {
                             supabase.from('users').select('*').eq('id', session.user.id).single().then(({data}) => {
                                 if(data) setUser(data);
                             });
                         }
-                    });
+                    }).catch(e => console.error(e));
                 }
             }, []);
 
