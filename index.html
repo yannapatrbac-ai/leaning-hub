@@ -37,8 +37,8 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Supabase JS via CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase JS (เปลี่ยนมาใช้ unpkg เพื่อความเสถียร) -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <style>
         body { 
@@ -81,7 +81,6 @@
         .blob-2 { position: absolute; bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(196,181,253,0.8) 0%, rgba(196,181,253,0) 70%); border-radius: 50%; filter: blur(80px); animation-delay: 2s; }
         .blob-3 { position: absolute; top: 40%; left: 40%; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(167,243,208,0.6) 0%, rgba(167,243,208,0) 70%); border-radius: 50%; filter: blur(60px); animation-delay: 4s; }
         
-        /* หน้าจอโหลดระหว่างรอประมวลผล */
         #loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; background: #f8fafc; font-family: 'Inter', sans-serif; color: #4f46e5; }
         .spinner { border: 4px solid rgba(79, 70, 229, 0.2); border-left-color: #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 16px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -89,7 +88,6 @@
 </head>
 <body>
     <div id="root">
-        <!-- จะแสดงหน้านี้ชั่วคราวตอนที่หน้าจอขาว (กำลังโหลด React) -->
         <div id="loading-screen">
             <div class="spinner"></div>
             <h2 style="font-weight: 600; font-size: 18px;">กำลังโหลดระบบ RH5 Learning Hub...</h2>
@@ -97,7 +95,6 @@
         </div>
     </div>
 
-    <!-- สคริปต์ป้องกันการจอขาว หากมี Error จะแสดงข้อความขึ้นมา -->
     <script>
         window.onerror = function(message, source, lineno, colno, error) {
             document.getElementById('root').innerHTML = '<div style="padding: 2rem; color: #ef4444; font-family: sans-serif;"><h2>เกิดข้อผิดพลาดในระบบ (System Error)</h2><p>' + message + '</p><p style="font-size:12px; color:#64748b;">บรรทัดที่: ' + lineno + '</p></div>';
@@ -108,23 +105,20 @@
         const { useState, useEffect } = React;
 
         // ==========================================
-        // 🔴 1. ตั้งค่า SUPABASE (แก้ URL ให้ถูกต้องแล้ว)
+        // 🔴 1. ตั้งค่า SUPABASE 🔴
         // ==========================================
-        const SUPABASE_URL = 'https://snjdjphxbvxkikxensal.supabase.co'; // ลบคำว่า /rest/v1/ ออกแล้ว
+        const SUPABASE_URL = 'https://snjdjphxbvxkikxensal.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuamRqcGh4YnZ4a2lreGVuc2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDQ0MDAsImV4cCI6MjA5NTQ4MDQwMH0.FRyGyWz2iTnxQFYInMiicrYw7EWg2S0ZTCPZMYaHR1M';
 
-        const isSupabaseConfigured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
-        let supabase = null;
+        let supabaseClient = null;
         
-        // เช็คว่าโหลด Supabase ผ่าน CDN สำเร็จหรือไม่ ป้องกันจอขาว
-        if (isSupabaseConfigured && window.supabase) {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // ตรวจสอบว่าโหลด Supabase ผ่าน CDN สำเร็จหรือไม่ (เปลี่ยนชื่อตัวแปรเป็น supabaseClient ป้องกันการชนกัน)
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
-        // --- ข้อมูลจำลอง (Mock Data) สำหรับตอนแอปยังไม่มีข้อมูล ---
-        const INITIAL_USERS = [
-            { id: 'EMP10001', nameTh: 'แอดมิน เดโม่ (โหมดทดสอบ)', position: 'Admin', zone: 'ส่วนกลาง', role: 'trainer', username: 'admin', examStamps: 99, avgScore: 100 }
-        ];
+        // --- Mock Data ---
+        const INITIAL_USERS = [{ id: 'EMP10001', nameTh: 'แอดมิน เดโม่ (โหมดทดสอบ)', position: 'Admin', zone: 'ส่วนกลาง', role: 'trainer', username: 'admin', examStamps: 99, avgScore: 100 }];
         const MOCK_USER = INITIAL_USERS[0];
         const MOCK_BANNERS = [{ id: 1, title: 'แคมเปญท่องเที่ยวยุโรป 2024', imageUrl: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=1200&q=80', link: '#' }];
         const MOCK_EXAMS = [{ id: 1, title: 'ข้อสอบเดโม่', description: 'นี่คือข้อสอบจำลอง', imageUrl: 'https://images.unsplash.com/photo-1591696205602-2f950c417cb9?auto=format&fit=crop&w=800&q=80', link: '#', dueDate: '30 พ.ค. 2567' }];
@@ -182,7 +176,7 @@
                 e.preventDefault();
                 setLoading(true);
                 
-                if (!supabase) {
+                if (!supabaseClient) {
                     alert("⚠️ คำเตือน: ยังไม่ได้เปิดการเชื่อมต่อ Supabase\n\nระบบจะเข้าสู่ Demo Mode อัตโนมัติ");
                     setTimeout(() => onSessionEstablished(MOCK_USER), 1000);
                     return;
@@ -190,7 +184,7 @@
 
                 try {
                     const formattedEmail = email.includes('@') ? email : `${email}@rh5.internal`;
-                    const { data, error } = await supabase.auth.signInWithPassword({ email: formattedEmail, password });
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({ email: formattedEmail, password });
                     
                     if (error) {
                         alert('เข้าสู่ระบบไม่สำเร็จ: ' + error.message);
@@ -208,14 +202,14 @@
                 e.preventDefault();
                 setLoading(true);
 
-                if (!supabase) {
+                if (!supabaseClient) {
                     alert("ต้องตั้งค่า Supabase ก่อนจึงจะสมัครสมาชิกได้");
                     setLoading(false); return;
                 }
 
                 try {
                     const emailForAuth = `${regData.username}@rh5.internal`;
-                    const { data, error } = await supabase.auth.signUp({
+                    const { data, error } = await supabaseClient.auth.signUp({
                         email: emailForAuth,
                         password: regData.password,
                         options: {
@@ -242,12 +236,12 @@
             };
 
             const fetchUserProfile = async (userId) => {
-                const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+                const { data, error } = await supabaseClient.from('users').select('*').eq('id', userId).single();
                 if (data) {
                     onSessionEstablished(data);
                 } else {
                     alert("เข้าสู่ระบบสำเร็จ แต่ไม่พบข้อมูล Profile ของคุณ (โปรดรอสักครู่และลองล็อกอินใหม่เนื่องจาก Trigger อาจจะทำงานช้า)");
-                    supabase.auth.signOut();
+                    supabaseClient.auth.signOut();
                     setLoading(false);
                 }
             };
@@ -350,8 +344,8 @@
             const [banners, setBanners] = useState(MOCK_BANNERS);
             
             useEffect(() => {
-                if (supabase) {
-                    supabase.from('banners').select('*').order('order_index').then(({data}) => {
+                if (supabaseClient) {
+                    supabaseClient.from('banners').select('*').order('order_index').then(({data}) => {
                         if(data && data.length > 0) setBanners(data);
                     });
                 }
@@ -411,20 +405,20 @@
             const [library, setLibrary] = useState(MOCK_LIBRARY);
             
             useEffect(() => {
-                if (supabase) {
-                    supabase.from('library_items').select('*').order('created_at', { ascending: false }).then(({data}) => {
+                if (supabaseClient) {
+                    supabaseClient.from('library_items').select('*').order('created_at', { ascending: false }).then(({data}) => {
                         if(data && data.length > 0) setLibrary(data);
                     });
                 }
             }, []);
 
             const logInteraction = async (item, action) => {
-                if(!supabase) {
+                if(!supabaseClient) {
                     if(action === 'view' && item.type === 'link') window.open(item.content_url || '#', '_blank');
                     return;
                 }
                 
-                await supabase.from('library_interactions').insert([{ user_id: user.id, item_id: item.id, action_type: action }]);
+                await supabaseClient.from('library_interactions').insert([{ user_id: user.id, item_id: item.id, action_type: action }]);
                 
                 if(action === 'view' && item.type === 'link') window.open(item.content_url, '_blank');
                 else if(action === 'download') window.open(item.content_url, '_blank');
@@ -520,8 +514,8 @@
             const [usersList, setUsersList] = useState(INITIAL_USERS);
 
             useEffect(() => {
-                if (supabase && currentUser.role === 'trainer') {
-                    supabase.from('users').select('*').then(({data}) => { if(data) setUsersList(data); });
+                if (supabaseClient && currentUser.role === 'trainer') {
+                    supabaseClient.from('users').select('*').then(({data}) => { if(data) setUsersList(data); });
                 }
             }, []);
 
@@ -541,7 +535,7 @@
             };
 
             const handleLogout = async () => {
-                if (supabase) await supabase.auth.signOut();
+                if (supabaseClient) await supabaseClient.auth.signOut();
                 onLogout();
             };
 
@@ -594,10 +588,10 @@
             const [user, setUser] = useState(null); 
 
             useEffect(() => {
-                if(supabase) {
-                    supabase.auth.getSession().then(({ data: { session } }) => {
+                if(supabaseClient) {
+                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
                         if (session) {
-                            supabase.from('users').select('*').eq('id', session.user.id).single().then(({data}) => {
+                            supabaseClient.from('users').select('*').eq('id', session.user.id).single().then(({data}) => {
                                 if(data) setUser(data);
                             });
                         }
