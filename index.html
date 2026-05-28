@@ -37,8 +37,8 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Supabase JS (เปลี่ยนมาใช้ unpkg เพื่อความเสถียร) -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Supabase JS (กลับมาใช้ cdn.jsdelivr เพื่อความเสถียรที่สุด) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         body { 
@@ -112,12 +112,12 @@
 
         let supabaseClient = null;
         
-        // ตรวจสอบว่าโหลด Supabase ผ่าน CDN สำเร็จหรือไม่ (เปลี่ยนชื่อตัวแปรเป็น supabaseClient ป้องกันการชนกัน)
+        // ตรวจสอบไลบรารีจาก jsDelivr
         if (window.supabase) {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
-        // --- Mock Data ---
+        // --- Mock Data (ถ้าเกิดปัญหาต่อเน็ตไม่ได้) ---
         const INITIAL_USERS = [{ id: 'EMP10001', nameTh: 'แอดมิน เดโม่ (โหมดทดสอบ)', position: 'Admin', zone: 'ส่วนกลาง', role: 'trainer', username: 'admin', examStamps: 99, avgScore: 100 }];
         const MOCK_USER = INITIAL_USERS[0];
         const MOCK_BANNERS = [{ id: 1, title: 'แคมเปญท่องเที่ยวยุโรป 2024', imageUrl: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=1200&q=80', link: '#' }];
@@ -187,7 +187,7 @@
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email: formattedEmail, password });
                     
                     if (error) {
-                        alert('เข้าสู่ระบบไม่สำเร็จ: ' + error.message);
+                        alert('เข้าสู่ระบบไม่สำเร็จ: รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง');
                         setLoading(false);
                     } else {
                         fetchUserProfile(data.user.id);
@@ -240,7 +240,7 @@
                 if (data) {
                     onSessionEstablished(data);
                 } else {
-                    alert("เข้าสู่ระบบสำเร็จ แต่ไม่พบข้อมูล Profile ของคุณ (โปรดรอสักครู่และลองล็อกอินใหม่เนื่องจาก Trigger อาจจะทำงานช้า)");
+                    alert("เข้าสู่ระบบสำเร็จ แต่ไม่พบข้อมูล Profile (อาจจะกำลังสร้างอยู่ โปรดลองล็อกอินอีกครั้งใน 5 วินาที)");
                     supabaseClient.auth.signOut();
                     setLoading(false);
                 }
@@ -271,7 +271,7 @@
                                         
                                         <form onSubmit={handleLogin} className="space-y-5 mt-6">
                                             <div>
-                                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Username</label>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Username (เช่น Admin01)</label>
                                                 <input type="text" onChange={(e)=>setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl glass-input" placeholder="รหัสพนักงาน" required />
                                             </div>
                                             <div>
@@ -279,7 +279,7 @@
                                                 <input type="password" onChange={(e)=>setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl glass-input" placeholder="••••••••" required />
                                             </div>
                                             <button type="submit" disabled={loading} className="w-full bg-brand-600/90 text-white font-bold py-3.5 rounded-xl transition-colors shadow-md border border-white/20 mt-4">
-                                                {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+                                                {loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
                                             </button>
                                         </form>
 
